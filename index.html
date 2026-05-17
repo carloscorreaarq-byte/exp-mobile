@@ -136,7 +136,7 @@
         .from('usuarios')
         .select('id')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
 
       if (usuario) {
         window.location.href = './app.html';
@@ -167,7 +167,7 @@
           .from('usuarios')
           .select('id, nome, iniciais, role, cor, viewer_only')
           .eq('id', data.user.id)
-          .single();
+          .maybeSingle();
 
         if (err2) throw err2;
         sessionStorage.setItem('exp_usuario', JSON.stringify(usuario));
