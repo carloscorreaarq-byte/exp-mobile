@@ -37,7 +37,7 @@ async function getUsuario() {
     .from('usuarios')
     .select('id, nome, iniciais, role, cor, viewer_only')
     .eq('id', session.user.id)
-    .single();
+    .maybeSingle();
 
   if (error || !data) {
     // Sessão existe mas sem perfil — faz logout para quebrar o loop
