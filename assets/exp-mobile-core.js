@@ -26,20 +26,26 @@ window.getSB = initSupabase;
 async function getUsuario() {
   const raw = sessionStorage.getItem('exp_usuario');
   if (raw) {
-    try { return JSON.parse(raw); } catch { /* re-fetch */ }
+    try { return JSON.parse(raw); } catch { sessionStorage.removeItem('exp_usuario'); }
   }
 
   const sb = initSupabase();
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return null;
 
-  const { data } = await sb
+  const { data, error } = await sb
     .from('usuarios')
     .select('id, nome, iniciais, role, cor, viewer_only')
     .eq('id', session.user.id)
     .single();
 
-  if (data) sessionStorage.setItem('exp_usuario', JSON.stringify(data));
+  if (error || !data) {
+    // Sessão existe mas sem perfil — faz logout para quebrar o loop
+    await sb.auth.signOut();
+    return null;
+  }
+
+  sessionStorage.setItem('exp_usuario', JSON.stringify(data));
   return data;
 }
 
