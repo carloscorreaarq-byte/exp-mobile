@@ -135,7 +135,7 @@
       const { data: usuario } = await sb
         .from('usuarios')
         .select('id')
-        .eq('id', session.user.id)
+        .eq('auth_id', session.user.id)
         .maybeSingle();
 
       if (usuario) {
@@ -166,11 +166,11 @@
         const { data: usuario, error: err2 } = await sb
           .from('usuarios')
           .select('id, nome, iniciais, role, cor, viewer_only')
-          .eq('id', data.user.id)
+          .eq('auth_id', data.user.id)
           .maybeSingle();
 
         if (err2) throw err2;
-        sessionStorage.setItem('exp_usuario', JSON.stringify(usuario));
+        sessionStorage.setItem('exp_usuario', JSON.stringify(buildExpUsuarioPayload(data.user.id, usuario)));
         window.location.href = './app.html';
 
       } catch (err) {
