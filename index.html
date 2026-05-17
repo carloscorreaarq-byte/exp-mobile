@@ -127,8 +127,23 @@
         window.location.href = './app.html';
         return;
       }
-      const { data: { session } } = await initSupabase().auth.getSession();
-      if (session) window.location.href = './app.html';
+      const sb = initSupabase();
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) return;
+
+      // Valida que o perfil existe antes de redirecionar
+      const { data: usuario } = await sb
+        .from('usuarios')
+        .select('id')
+        .eq('id', session.user.id)
+        .single();
+
+      if (usuario) {
+        window.location.href = './app.html';
+      } else {
+        // Sessão órfã — limpa para evitar loop
+        await sb.auth.signOut();
+      }
     })();
 
     async function handleLogin(e) {
