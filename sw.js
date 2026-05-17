@@ -1,26 +1,14 @@
-// EXP Mobile — Service Worker v1.0
-const CACHE = 'exp-mobile-v1';
+// EXP Mobile — Service Worker v2.0
+const CACHE = 'exp-mobile-v2';
 
+// Apenas assets estáticos que não mudam com frequência
 const STATIC = [
-  './index.html',
-  './app.html',
-  './gestao.html',
-  './tarefas.html',
-  './projetos.html',
-  './projeto.html',
-  './horas.html',
-  './custos.html',
-  './revisoes.html',
-  './contatos.html',
-  './chat.html',
-  './calc.html',
   './assets/exp-mobile.css',
   './assets/exp-mobile-core.js',
-  'https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&display=swap',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
 ];
 
-// Install — cache all static assets
+// Install — cache só os assets
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE).then((cache) =>
@@ -30,21 +18,23 @@ self.addEventListener('install', (e) => {
   self.skipWaiting();
 });
 
-// Activate — clean up old caches
+// Activate — limpa caches antigos, sem claim() para não interromper navegação
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
     )
   );
-  self.clients.claim();
 });
 
-// Fetch — network-first for Supabase, cache-first for static
+// Fetch strategy:
+// - Supabase → sempre rede
+// - HTML (.html) → sempre rede (garante updates chegarem ao usuário)
+// - Assets (css/js) → cache-first com fallback de rede
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // Always network for Supabase API
+  // Supabase — sempre rede
   if (url.hostname.includes('supabase.co')) {
     e.respondWith(
       fetch(e.request).catch(() =>
@@ -57,7 +47,15 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Cache-first for everything else
+  // HTML — sempre rede para garantir versão atualizada
+  if (url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Assets — cache-first
   e.respondWith(
     caches.match(e.request).then((cached) => cached || fetch(e.request))
   );
