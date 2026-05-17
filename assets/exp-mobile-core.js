@@ -21,6 +21,25 @@ function initSupabase() {
 
 // Alias global para acesso rápido nos módulos
 window.getSB = initSupabase;
+function buildExpUsuarioPayload(authId, usuario) {
+  const nome = (usuario && usuario.nome) || '';
+  return {
+    auth_id: authId || null,
+    app_user_id: usuario && typeof usuario.id !== 'undefined' ? usuario.id : null,
+    nome,
+    apelido: (usuario && usuario.apelido) || (nome ? nome.split(' ')[0] : ''),
+    iniciais: (usuario && usuario.iniciais) || '',
+    cor: (usuario && usuario.cor) || '#888',
+    role: (usuario && usuario.role) || '',
+    viewer_only: !!(usuario && usuario.viewer_only),
+    is_platform_manager: !!(usuario && usuario.is_platform_manager),
+    can_coordinate_projects: !!(usuario && usuario.can_coordinate_projects),
+    termo_status: (usuario && usuario.termo_status) || null,
+    termo_assinado_em: (usuario && usuario.termo_assinado_em) || null,
+    termo_expira_em: (usuario && usuario.termo_expira_em) || null,
+    status_acesso: (usuario && usuario.status_acesso) || null
+  };
+}
 
 // ── Auth ──────────────────────────────────────
 async function getUsuario() {
@@ -36,7 +55,7 @@ async function getUsuario() {
   const { data, error } = await sb
     .from('usuarios')
     .select('id, nome, iniciais, role, cor, viewer_only')
-    .eq('id', session.user.id)
+    .eq('auth_id', session.user.id)
     .maybeSingle();
 
   if (error || !data) {
@@ -45,8 +64,9 @@ async function getUsuario() {
     return null;
   }
 
-  sessionStorage.setItem('exp_usuario', JSON.stringify(data));
-  return data;
+  const payload = buildExpUsuarioPayload(session.user.id, data);
+  sessionStorage.setItem('exp_usuario', JSON.stringify(payload));
+  return payload;
 }
 
 async function requireAuth(loginPath = './index.html') {
@@ -63,7 +83,7 @@ async function signOut() {
 }
 
 function isSocio(u) {
-  return u?.role === 'socio' || u?.role === 'socio_admin';
+  return ['socio', 'socio_adm', 'socio_admin'].includes((u?.role || '').toLowerCase());
 }
 
 function roleLabel(role) {
