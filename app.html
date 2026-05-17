@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#3E7858">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>EXP</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/exp-mobile.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="./assets/exp-mobile-core.js"></script>
+  <style>
+    .user-info     { flex: 1; min-width: 0; }
+    .user-name     { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-role-tag { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+
+    .greeting-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--s-md);
+      display: flex;
+      align-items: center;
+      gap: var(--s-sm);
+      margin-bottom: var(--s-lg);
+    }
+
+    .greeting-text   { flex: 1; }
+    .greeting-title  { font-size: 16px; font-weight: 800; }
+    .greeting-sub    { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+    .viewer-banner {
+      background: var(--ouro-dim);
+      border: 1px solid var(--ouro);
+      border-radius: var(--radius-sm);
+      padding: var(--s-sm) var(--s-md);
+      font-size: 12px;
+      color: var(--ouro);
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: var(--s-md);
+    }
+
+    .desktop-note {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--s-sm) var(--s-md);
+      font-size: 12px;
+      color: var(--text-3);
+      text-align: center;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-logo">EXP</div>
+    <div class="user-info" id="header-user">
+      <div class="user-name" id="header-name">…</div>
+      <div class="user-role-tag" id="header-role"></div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Tema"></button>
+      <button class="icon-btn" onclick="openSheet('signout')" title="Sair">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Conteúdo -->
+  <div class="page">
+    <div class="page-content" id="page-content">
+      <div class="loader-page"><div class="loader"></div></div>
+    </div>
+  </div>
+
+  <!-- Nav inferior -->
+  <nav class="bottom-nav" id="bottom-nav"></nav>
+
+  <!-- Sheet: confirmar saída -->
+  <div class="sheet-overlay" id="signout-overlay" onclick="closeSheet('signout')"></div>
+  <div class="sheet" id="signout-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Sair da plataforma?</div>
+    <p style="font-size:13px; color:var(--text-2); margin-bottom:var(--s-lg)">
+      Você precisará fazer login novamente.
+    </p>
+    <button class="btn btn-danger btn-full" onclick="signOut()">Sair</button>
+    <button class="btn btn-secondary btn-full" style="margin-top:8px" onclick="closeSheet('signout')">Cancelar</button>
+  </div>
+
+  <script>
+    const MODULES = [
+      {
+        id:      'gestao',
+        href:    './gestao.html',
+        name:    'EXP.gestão',
+        desc:    'Projetos, tarefas, horas e revisões',
+        icon:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>`,
+        accent:  'verde',
+        roles:   'all',
+      },
+      {
+        id:      'contatos',
+        href:    './contatos.html',
+        name:    'EXP.contatos',
+        desc:    'Clientes, parceiros e fornecedores',
+        icon:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`,
+        accent:  'azul',
+        roles:   'all',
+      },
+      {
+        id:      'chat',
+        href:    './chat.html',
+        name:    'EXP.chat',
+        desc:    'Mensagens e canais da equipe',
+        icon:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+        accent:  'verde',
+        roles:   'all',
+      },
+      {
+        id:      'calc',
+        href:    './calc.html',
+        name:    'EXP.calc',
+        desc:    'Simulação de honorários',
+        icon:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M12 10h2M16 10h.01M8 14h2M12 14h2M16 14h2M8 18h2M12 18h2M16 18h2"/></svg>`,
+        accent:  'ouro',
+        roles:   'socio',
+      },
+    ];
+
+    function greetingText(nome) {
+      const h = new Date().getHours();
+      const name = nome.split(' ')[0];
+      if (h < 12) return `Bom dia, ${name}`;
+      if (h < 18) return `Boa tarde, ${name}`;
+      return `Boa noite, ${name}`;
+    }
+
+    function renderPage(usuario) {
+      const socio   = isSocio(usuario);
+      const visible = MODULES.filter(m => m.roles === 'all' || socio);
+
+      document.getElementById('page-content').innerHTML = `
+        ${usuario.viewer_only ? `<div class="viewer-banner">Modo visualização — edição desabilitada</div>` : ''}
+
+        <!-- Saudação -->
+        <div class="greeting-bar">
+          <div class="avatar avatar-lg" style="background:${usuario.cor ?? 'var(--verde)'}">${usuario.iniciais ?? '??'}</div>
+          <div class="greeting-text">
+            <div class="greeting-title">${greetingText(usuario.nome)}</div>
+            <div class="greeting-sub">${roleLabel(usuario.role)}</div>
+          </div>
+        </div>
+
+        <!-- Módulos -->
+        <p class="section-label">Módulos</p>
+        <div class="module-grid">
+          ${visible.map(m => `
+            <a href="${m.href}" class="module-card accent-${m.accent}">
+              <div class="module-card-icon">${m.icon}</div>
+              <div>
+                <div class="module-card-name">${m.name}</div>
+                <div class="module-card-desc">${m.desc}</div>
+              </div>
+            </a>
+          `).join('')}
+        </div>
+
+        <div style="margin-top: var(--s-lg)">
+          <div class="desktop-note">
+            CRM, Financeiro e Apoio estão disponíveis<br>na versão desktop da plataforma.
+          </div>
+        </div>
+      `;
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const usuario = await requireAuth('./index.html');
+      if (!usuario) return;
+
+      // Header
+      document.getElementById('header-name').textContent = usuario.nome;
+      document.getElementById('header-role').textContent = roleLabel(usuario.role);
+
+      // Tema btn
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      document.getElementById('theme-btn').innerHTML = themeIcon(isDark ? 'dark' : 'light');
+
+      // Nav + conteúdo
+      buildBottomNav('app', isSocio(usuario));
+      renderPage(usuario);
+
+      // Solicitar push depois de 4s (não interromper o carregamento)
+      setTimeout(async () => {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+          await requestPushPermission();
+        }
+      }, 4000);
+    });
+  </script>
+
+</body>
+</html>
